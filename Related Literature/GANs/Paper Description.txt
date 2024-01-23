@@ -1,0 +1,9 @@
+Generative Adversarial Network: First paper, introduce concept of GAN, raised several possible issues as well. Check back for fundamental concepts
+
+Conditional GAN: Introduced class input into the Generator and Discriminator.
+
+ACGAN: Generator takes class input as well. Discriminator has 2 loss, both over authenticity and class (Major Novelty). Note that manually increasing resolution does not increase accuracy. Used Inception as evaluation metric for goodness of image and multiscale structural similarity (MS-SSIM) for diversity of image (mode collapse).
+
+IS: https://medium.com/octavian-ai/a-simple-explanation-of-the-inception-score-372dff6a8c7a, Inception score measuring quality and diversity of generator, probably need to use a custom model instead of inception model for this task.
+
+ReACGAN: Propose a new loss technique once again. Similar to ACGAN in architecture, except for a more bloated discriminator
