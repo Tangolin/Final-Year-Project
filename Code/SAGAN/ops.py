@@ -1,7 +1,3 @@
-"""Taken and modified from https://github.com/pytorch/pytorch/issues/8985"""
-
-from turtle import update
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,6 +6,8 @@ from torch.nn.utils.parametrizations import spectral_norm
 
 
 class ConditionalBatchNorm(nn.Module):
+    """Taken and modified from https://github.com/pytorch/pytorch/issues/8985"""
+
     def __init__(self, num_classes, num_features, decay_rate=0.999):
         super().__init__()
         self.num_features = num_features
