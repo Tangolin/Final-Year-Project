@@ -9,10 +9,10 @@ from torch.nn.utils.parametrizations import spectral_norm
 class GeneratorBlock(nn.Module):
     def __init__(self, in_channels, out_channels, num_classes):
         super().__init__()
-        # Paddings have to be 1 to ensure the output is the same size
 
         self.main_bloc = nn.Sequential(
             spectral_norm(
+                # Paddings have to be 1 to ensure the output is the same size
                 nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
             ),
             ConditionalBatchNorm(num_classes, out_channels),
@@ -65,12 +65,15 @@ class Generator(nn.Module):
         )
 
         self.sequential = nn.Sequential(
+            # Img size 8 * 8
             GeneratorBlock(g_feature_dim * 32, g_feature_dim * 32, num_classes),
             GeneratorBlock(g_feature_dim * 32, g_feature_dim * 16, num_classes),
             GeneratorBlock(g_feature_dim * 16, g_feature_dim * 8, num_classes),
+            # Img size 32 * 32
             AttentionBlock(g_feature_dim * 8),
             GeneratorBlock(g_feature_dim * 8, g_feature_dim * 4, num_classes),
             GeneratorBlock(g_feature_dim * 4, g_feature_dim * 2, num_classes),
+            # Img size 256 * 256
             GeneratorBlock(g_feature_dim * 2, g_feature_dim, num_classes),
             nn.BatchNorm2d(g_feature_dim),
             nn.ReLU(),
@@ -80,26 +83,19 @@ class Generator(nn.Module):
             nn.Tanh(),
         )
 
+    def initialise_weights(self):
+        init.xavier_uniform_(self.sn_linear.weight)
+        init.constant_(self.sn_linear.bias, 0)
+
     def forward(self, x, y):
-        print(x.shape)
-        print(y.shape)
         out = self.sn_linear(x)
-        print(out.shape)
         out = out.view(-1, self.g_feature_dim * 32, 4, 4)
-        print(out.shape)
+
         for layer in self.sequential.children():
-            print(layer)
             if isinstance(layer, GeneratorBlock):
                 out = layer(out, y)
-                print(out.shape)
             else:
                 out = layer(out)
-                print(out.shape)
+        print(out.shape)
 
         return out
-
-
-generator = Generator(1024, 64, 5).cuda()
-labels = torch.randint(0, 5, (16,)).cuda()
-x = torch.randn((16, 1024)).cuda()
-generator(x, labels)
