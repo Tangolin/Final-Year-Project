@@ -11,17 +11,21 @@ class ConditionalBatchNorm(nn.Module):
     def __init__(self, num_classes, num_features, decay_rate=0.999):
         super().__init__()
         self.num_features = num_features
-        self.embeddings = nn.Embedding(num_classes, num_features * 2)
+        self.weights = spectral_norm(nn.Embedding(num_classes, num_features))
+        self.biases = spectral_norm(nn.Embedding(num_classes, num_features))
         self.bn = nn.BatchNorm2d(
             num_features, momentum=decay_rate, affine=False, eps=1e-5
         )
 
-        # Initialise the embeddings weights with specific distribution
-        self.embeddings.weight.data[:, :num_features].normal_(1, 0.02)
-        self.embeddings.weight.data[:, num_features:].zero_()
+        self.initialise_weights()
+
+    def initialise_weights(self):
+        # Same initialization as the original code
+        init.ones_(self.weights.weight)
+        init.zeros_(self.biases.weight)
 
     def forward(self, x, y):
-        gamma, beta = self.embeddings(y).chunk(2, 1)
+        gamma, beta = self.weights(y), self.biases(y)
         out = self.bn(x)
 
         gamma_reshaped, beta_reshaped = gamma.view(
