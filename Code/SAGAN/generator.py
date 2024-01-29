@@ -96,6 +96,5 @@ class Generator(nn.Module):
                 out = layer(out, y)
             else:
                 out = layer(out)
-        print(out.shape)
 
         return out
