@@ -2,7 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
+from PIL import Image
 from torch.nn.utils.parametrizations import spectral_norm
+from torchvision.transforms import v2
 
 
 class ConditionalBatchNorm(nn.Module):
@@ -77,3 +79,45 @@ class AttentionBlock(nn.Module):
         out = self.conv_o(attd_value)
 
         return x + self.sigma * out
+
+
+class CustomTransform(v2.Transform):
+    def __init__(self):
+        self.basic_transforms = v2.Compose(
+            [
+                v2.PILToTensor(),
+                v2.Grayscale(1),
+                v2.ToDtype(torch.float32, scale=True),
+            ]
+        )
+
+        self.resize = v2.Resize(256)
+        self.center_crop = v2.CenterCrop(256)
+
+        # Transforms for data augmentation
+        self.augmentations = v2.Compose(
+            [
+                v2.RandomApply(v2.RandomRotation(180), p=0.5),
+                v2.RandomHorizontalFlip(0.5),
+                v2.RandomVerticalFlip(0.5),
+                v2.RandomApply(v2.ElasticTransform(50), p=0.5),
+                v2.RandomApply(v2.GaussianBlur((9, 9)), p=0.5),
+                v2.Normalize(mean=[0.5], std=[0.5]),
+            ]
+        )
+        super().__init__()
+
+    def __call__(self, img: Image):
+        # Firstly, ensure all images are greyscaled
+        img = self.basic_transforms(img)
+
+        # Check size
+        _, width, height = img.shape
+        if width != 256 or height != 256:
+            img = self.resize(img)
+            img = self.center_crop(img)
+
+        # Perform a random set of transforms
+        img = self.augmentations(img)
+
+        return img
