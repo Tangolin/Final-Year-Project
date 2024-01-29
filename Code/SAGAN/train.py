@@ -136,7 +136,11 @@ def train(config, device):
             with torch.no_grad():
                 fake_images = gan_generator(val_z, val_lab)
             save_image(
-                fake_images * torch.Tensor([0.5]) + torch.Tensor([0.5]),
+                real_images.to("cpu") * torch.Tensor([0.5]) + torch.Tensor([0.5]),
+                os.path.join(config.sample_img_path, f"{step + 1}_real.png"),
+            )
+            save_image(
+                fake_images.to("cpu") * torch.Tensor([0.5]) + torch.Tensor([0.5]),
                 os.path.join(config.sample_img_path, f"{step + 1}_fake.png"),
             )
 

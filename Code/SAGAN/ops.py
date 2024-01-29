@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
-from PIL import Image
 from torch.nn.utils.parametrizations import spectral_norm
 from torchvision.transforms import v2
 
@@ -83,6 +82,7 @@ class AttentionBlock(nn.Module):
 
 class CustomTransform(v2.Transform):
     def __init__(self):
+        super().__init__()
         self.basic_transforms = v2.Compose(
             [
                 v2.PILToTensor(),
@@ -91,23 +91,22 @@ class CustomTransform(v2.Transform):
             ]
         )
 
-        self.resize = v2.Resize(256)
+        self.resize = v2.Resize(256, antialias=True)
         self.center_crop = v2.CenterCrop(256)
 
         # Transforms for data augmentation
         self.augmentations = v2.Compose(
             [
-                v2.RandomApply(v2.RandomRotation(180), p=0.5),
+                v2.RandomApply([v2.RandomRotation(180)], p=0.5),
                 v2.RandomHorizontalFlip(0.5),
                 v2.RandomVerticalFlip(0.5),
-                v2.RandomApply(v2.ElasticTransform(50), p=0.5),
-                v2.RandomApply(v2.GaussianBlur((9, 9)), p=0.5),
+                v2.RandomApply([v2.ElasticTransform(50)], p=0.5),
+                v2.RandomApply([v2.GaussianBlur((9, 9))], p=0.5),
                 v2.Normalize(mean=[0.5], std=[0.5]),
             ]
         )
-        super().__init__()
 
-    def __call__(self, img: Image):
+    def __call__(self, img):
         # Firstly, ensure all images are greyscaled
         img = self.basic_transforms(img)
 

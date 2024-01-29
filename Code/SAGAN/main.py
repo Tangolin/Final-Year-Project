@@ -49,13 +49,13 @@ def get_parameters():
     parser.add_argument("--ckpt_path", type=str, default=None)
 
     # Path settings
-    parser.add_argument("--train_data_dir", type=str, default="./data/train")
+    parser.add_argument("--train_data_dir", type=str, default="./data/CelebA")
     parser.add_argument("--model_save_path", type=str, default="./models")
     parser.add_argument("--sample_img_path", type=str, default="./samples")
 
     # Saving and logging settings
     parser.add_argument("--log_n_step", type=int, default=10)
-    parser.add_argument("--sample_step", type=int, default=10)
+    parser.add_argument("--sample_step", type=int, default=100)
     parser.add_argument("--save_step", type=float, default=20)
 
     return parser.parse_args()
