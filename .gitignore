@@ -1,9 +1,11 @@
 # Folders and files
 data
 .vscode
+logs
+errors
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
+__pycache__
 *.py[cod]
 *$py.class
 
