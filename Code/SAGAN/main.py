@@ -55,8 +55,8 @@ def get_parameters():
 
     # Saving and logging settings
     parser.add_argument("--log_n_step", type=int, default=10)
-    parser.add_argument("--sample_step", type=int, default=100)
-    parser.add_argument("--save_step", type=float, default=1)
+    parser.add_argument("--sample_step", type=int, default=10)
+    parser.add_argument("--save_step", type=float, default=20)
 
     return parser.parse_args()
 
