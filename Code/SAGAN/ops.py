@@ -38,6 +38,48 @@ class ConditionalBatchNorm(nn.Module):
         return out
 
 
+class AttentionBlockNoPool(nn.Module):
+    def __init__(self, in_channels):
+        super().__init__()
+        self.conv_q = spectral_norm(
+            nn.Conv2d(in_channels, in_channels // 8, kernel_size=1)
+        )
+        self.conv_k = spectral_norm(
+            nn.Conv2d(in_channels, in_channels // 8, kernel_size=4, stride=2, padding=1)
+        )
+        self.conv_v = spectral_norm(
+            nn.Conv2d(in_channels, in_channels // 2, kernel_size=4, stride=2, padding=1)
+        )
+        self.conv_o = spectral_norm(
+            nn.Conv2d(in_channels // 2, in_channels, kernel_size=1)
+        )
+        # self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        # Learnable parameter sigma
+        self.sigma = nn.parameter.Parameter(torch.zeros(1), requires_grad=True)
+
+        self.initialise_weights()
+
+    def initialise_weights(self):
+        for layer in [self.conv_q, self.conv_k, self.conv_v, self.conv_o]:
+            init.xavier_uniform_(layer.weight)
+            init.constant_(layer.bias, 0)
+
+    def forward(self, x):
+        n, _, h, w = x.shape
+
+        q = self.conv_q(x).view(n, -1, h * w)
+        k = self.conv_k(x).view(n, -1, (h * w) // 4)
+        v = self.conv_v(x).view(n, -1, (h * w) // 4)
+
+        attn = F.softmax(torch.bmm(q.permute(0, 2, 1), k), dim=-1)
+        attd_value = torch.bmm(v, attn.permute(0, 2, 1)).view(n, -1, h, w)
+
+        out = self.conv_o(attd_value)
+
+        return x + self.sigma * out
+
+
 class AttentionBlock(nn.Module):
     def __init__(self, in_channels):
         super().__init__()
@@ -80,43 +122,17 @@ class AttentionBlock(nn.Module):
         return x + self.sigma * out
 
 
-class CustomTransform(v2.Transform):
+class ToGray(v2.Transform):
     def __init__(self):
         super().__init__()
-        self.basic_transforms = v2.Compose(
-            [
-                v2.PILToTensor(),
-                v2.Grayscale(1),
-                v2.ToDtype(torch.float32, scale=True),
-            ]
-        )
-
-        self.resize = v2.Resize(256, antialias=True)
-        self.center_crop = v2.CenterCrop(256)
-
-        # Transforms for data augmentation
-        self.augmentations = v2.Compose(
-            [
-                v2.RandomApply([v2.RandomRotation(180)], p=0.5),
-                v2.RandomHorizontalFlip(0.5),
-                v2.RandomVerticalFlip(0.5),
-                v2.RandomApply([v2.ElasticTransform(50)], p=0.5),
-                v2.RandomApply([v2.GaussianBlur((9, 9))], p=0.5),
-                v2.Normalize(mean=[0.5], std=[0.5]),
-            ]
-        )
 
     def __call__(self, img):
-        # Firstly, ensure all images are greyscaled
-        img = self.basic_transforms(img)
+        return torch.mean(img, dim=0, keepdim=True)
 
-        # Check size
-        _, width, height = img.shape
-        if width != 256 or height != 256:
-            img = self.resize(img)
-            img = self.center_crop(img)
 
-        # Perform a random set of transforms
-        img = self.augmentations(img)
-
-        return img
+def denorm(x):
+    print(x.shape)
+    print(x)
+    out = (x + 1) / 2
+    print(type(out))
+    return out.clamp_(0, 1)
