@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
-from ops import AttentionBlock, ConditionalBatchNorm
+from ops import AttentionBlock
 from torch.nn.utils.parametrizations import spectral_norm
 
 
@@ -42,12 +42,13 @@ class DiscriminatorBlock(nn.Module):
         x_0 = x
         x = self.main_bloc(x)
 
-        if self.downsample or x_0.shape[1] != self.out_channels:
-            x_0 = self.skip_conv(x_0)
-
         if self.downsample:
             x = F.avg_pool2d(x, kernel_size=2, stride=2, padding=0)
-            x_0 = F.avg_pool2d(x_0, kernel_size=2, stride=2, padding=0)
+
+        if self.downsample or x_0.shape[1] != self.out_channels:
+            x_0 = self.skip_conv(x_0)
+            if self.downsample:
+                x_0 = F.avg_pool2d(x_0, kernel_size=2, stride=2, padding=0)
 
         return x_0 + x
 
@@ -83,10 +84,9 @@ class DiscriminatorOptimBlock(nn.Module):
     def forward(self, x):
         x_0 = x
 
+        x = self.main_bloc(x)
         x = F.avg_pool2d(x, kernel_size=2, stride=2, padding=0)
         x_0 = F.avg_pool2d(x_0, kernel_size=2, stride=2, padding=0)
-
-        x = self.main_bloc(x)
         x_0 = self.skip_conv(x_0)
 
         return x + x_0
@@ -97,24 +97,23 @@ class Discriminator(nn.Module):
         super().__init__()
 
         self.sequential = nn.Sequential(
-            # Img size 128 * 128
+            # Img size 64 * 64
             DiscriminatorOptimBlock(in_channels, d_feature_dim),
             DiscriminatorBlock(d_feature_dim, d_feature_dim * 2),
-            DiscriminatorBlock(d_feature_dim * 2, d_feature_dim * 4),
             # Img size 32 * 32
-            AttentionBlock(d_feature_dim * 4),
+            AttentionBlock(d_feature_dim * 2),
+            DiscriminatorBlock(d_feature_dim * 2, d_feature_dim * 4),
             DiscriminatorBlock(d_feature_dim * 4, d_feature_dim * 8),
-            DiscriminatorBlock(d_feature_dim * 8, d_feature_dim * 16),
             # Img size 4 * 4
-            DiscriminatorBlock(d_feature_dim * 16, d_feature_dim * 32),
+            DiscriminatorBlock(d_feature_dim * 8, d_feature_dim * 16),
             DiscriminatorBlock(
-                d_feature_dim * 32, d_feature_dim * 32, downsample=False
+                d_feature_dim * 16, d_feature_dim * 16, downsample=False
             ),
             nn.ReLU(),
         )
 
-        self.sn_linear = spectral_norm(nn.Linear(d_feature_dim * 32, 1))
-        self.sn_embedding = spectral_norm(nn.Embedding(num_classes, d_feature_dim * 32))
+        self.sn_linear = spectral_norm(nn.Linear(d_feature_dim * 16, 1))
+        self.sn_embedding = spectral_norm(nn.Embedding(num_classes, d_feature_dim * 16))
 
     def initialise_weights(self):
         init.xavier_uniform_(self.sn_linear.weight)

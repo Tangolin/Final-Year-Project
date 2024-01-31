@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
@@ -20,6 +19,7 @@ class GeneratorBlock(nn.Module):
             spectral_norm(
                 nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
             ),
+            nn.ReLU(),
         )
 
         self.bn1 = ConditionalBatchNorm(num_classes, in_channels)
@@ -57,28 +57,29 @@ class GeneratorBlock(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, in_features, g_feature_dim, num_classes):
+    def __init__(self, in_features, g_feature_dim, num_classes, out_channels):
         super().__init__()
         self.g_feature_dim = g_feature_dim
         self.sn_linear = spectral_norm(
-            nn.Linear(in_features, g_feature_dim * 32 * 4 * 4)
+            nn.Linear(in_features, g_feature_dim * 16 * 4 * 4)
         )
 
         self.sequential = nn.Sequential(
             # Img size 8 * 8
-            GeneratorBlock(g_feature_dim * 32, g_feature_dim * 32, num_classes),
-            GeneratorBlock(g_feature_dim * 32, g_feature_dim * 16, num_classes),
+            GeneratorBlock(g_feature_dim * 16, g_feature_dim * 16, num_classes),
             GeneratorBlock(g_feature_dim * 16, g_feature_dim * 8, num_classes),
-            # Img size 32 * 32
-            AttentionBlock(g_feature_dim * 8),
             GeneratorBlock(g_feature_dim * 8, g_feature_dim * 4, num_classes),
+            # Img size 32 * 32
+            AttentionBlock(g_feature_dim * 4),
             GeneratorBlock(g_feature_dim * 4, g_feature_dim * 2, num_classes),
             # Img size 256 * 256
             GeneratorBlock(g_feature_dim * 2, g_feature_dim, num_classes),
-            nn.BatchNorm2d(g_feature_dim),
+            nn.BatchNorm2d(g_feature_dim, eps=1e-5, momentum=0.9999),
             nn.ReLU(),
             spectral_norm(
-                nn.Conv2d(g_feature_dim, out_channels=1, kernel_size=3, padding=1)
+                nn.Conv2d(
+                    g_feature_dim, out_channels=out_channels, kernel_size=3, padding=1
+                )
             ),
             nn.Tanh(),
         )
@@ -89,7 +90,7 @@ class Generator(nn.Module):
 
     def forward(self, x, y):
         out = self.sn_linear(x)
-        out = out.view(-1, self.g_feature_dim * 32, 4, 4)
+        out = out.view(-1, self.g_feature_dim * 16, 4, 4)
 
         for layer in self.sequential.children():
             if isinstance(layer, GeneratorBlock):

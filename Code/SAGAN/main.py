@@ -3,9 +3,8 @@ import os
 from datetime import datetime
 
 import torch
-from infer import infer
 from torch.backends import cudnn
-from train import train
+from train_test import train
 
 
 def get_parameters():
@@ -17,8 +16,9 @@ def get_parameters():
     # parser.add_argument("--parallel", type=str2bool, default=False)
 
     # GAN settings
+    parser.add_argument("--imsize", type=int, default=64)
     parser.add_argument("--num_classes", type=int, default=5)
-    parser.add_argument("--in_channels", type=int, default=1)
+    parser.add_argument("--num_channels", type=int, default=1)
     parser.add_argument(
         "--z_dim", type=int, default=128, help="Dimensions of the input noise vector."
     )
@@ -40,7 +40,7 @@ def get_parameters():
     parser.add_argument("--g_lr", type=float, default=0.0001)
     parser.add_argument("--d_lr", type=float, default=0.0004)
     parser.add_argument("--optim_beta_1", type=float, default=0.0)
-    parser.add_argument("--optim_beta_2", type=float, default=0.999)
+    parser.add_argument("--optim_beta_2", type=float, default=0.9)
 
     # Resume training settings
     parser.add_argument(
@@ -62,7 +62,10 @@ def get_parameters():
 
 
 def main(config):
-    cudnn.benchmark = True
+    torch.manual_seed(42)
+
+    cudnn.deterministic = True
+    cudnn.benchmark = False
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     current_time = datetime.now().strftime("%Y-%m-%d-%H-%M")
     exp_name = "SAGAN-" + current_time
@@ -73,11 +76,8 @@ def main(config):
         os.makedirs(config.model_save_path, exist_ok=True)
         os.makedirs(config.sample_img_path, exist_ok=True)
 
-        print(config)
+        print(config, flush=True)
         train(config, device)
-
-    else:
-        infer(config, device)
 
 
 if __name__ == "__main__":
