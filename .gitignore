@@ -3,6 +3,8 @@ data
 .vscode
 logs
 errors
+models
+samples
 
 # Byte-compiled / optimized / DLL files
 __pycache__
