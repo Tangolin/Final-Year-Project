@@ -5,6 +5,7 @@ logs
 errors
 models
 samples
+job.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__
