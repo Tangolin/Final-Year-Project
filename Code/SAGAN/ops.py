@@ -131,8 +131,5 @@ class ToGray(v2.Transform):
 
 
 def denorm(x):
-    print(x.shape)
-    print(x)
     out = (x + 1) / 2
-    print(type(out))
     return out.clamp_(0, 1)

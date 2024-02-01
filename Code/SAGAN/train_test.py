@@ -2,11 +2,10 @@ import datetime
 import os
 import time
 
+import numpy as np
 import torch
-from discriminator_test import Discriminator_Test
 from discriminator_trial import Discriminator
 from generator import Generator
-from generator_test import Generator_Test
 from ops import ToGray, denorm
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -52,13 +51,6 @@ def train(config, device):
     )
 
     # Create the model and the optimizer
-    # gan_generator = Generator_Test(
-    #     z_dim=config.z_dim, conv_dim=config.feature_dim, image_size=config.imsize
-    # ).to(device)
-    # gan_discriminator = Discriminator_Test(
-    #     conv_dim=config.feature_dim,  # Should be same as config.g_feature_dim
-    #     image_size=config.imsize,
-    # ).to(device)
     gan_generator = Generator(
         in_features=config.z_dim,
         g_feature_dim=config.feature_dim,
@@ -86,19 +78,23 @@ def train(config, device):
     )
     print("Optimizers initialised.", flush=True)
 
-    # Define the current step and loss
+    # Define the current step
     cur_step = 0
+    best_g_loss = np.inf
+    best_d_loss = np.inf
 
     # Continue training a model
     if config.resume_training:
         assert config.ckpt_path is not None
         print(f"Resuming training from {config.ckpt_path}.", flush=True)
         checkpoint = torch.load(config.ckpt_path)
+        best_d_loss = checkpoint["best_d_loss"]
+        best_g_loss = checkpoint["best_g_loss"]
+        cur_step = checkpoint["step"] + 1
         gan_generator.load_state_dict(checkpoint["gan_generator_state_dict"])
         gan_discriminator.load_state_dict(checkpoint["gan_discriminator_state_dict"])
         g_optimizer.load_state_dict(checkpoint["g_optimizer_state_dict"])
         d_optimizer.load_state_dict(checkpoint["d_optimizer_state_dict"])
-        cur_step = checkpoint["step"] + 1
 
     print(f"Starting training from step {cur_step}.", flush=True)
     gan_generator.train()
@@ -119,9 +115,9 @@ def train(config, device):
         # Prepare the real and fake images
         real_images, labels = real_images.to(device), labels.to(device)
         if step == 0:
-            print(f"Images has shape: {tuple(real_images.shape)}.")
-            print(f"Labels has shape: {tuple(labels.shape)}.")
-            print(labels)
+            print(f"Images has shape: {tuple(real_images.shape)}.", flush=True)
+            print(f"Labels has shape: {tuple(labels.shape)}.", flush=True)
+            print(labels, flush=True)
 
         with torch.no_grad():
             noise_vector = torch.randn((config.batch_size, config.z_dim)).to(device)
@@ -178,15 +174,25 @@ def train(config, device):
                 os.path.join(config.sample_img_path, f"{step + 1}_fake.png"),
             )
 
-        # Save checkpoint
-        if (step + 1) % config.save_step == 0:
+        # Save checkpoint if model performs well or every n steps
+        if (d_loss < best_d_loss and g_loss < best_g_loss) or (
+            (step + 1) % config.save_step == 0
+        ):
+            if (step + 1) % config.save_step == 0:
+                filename = f"step_{step + 1}.pt"
+            if d_loss < best_d_loss and g_loss < best_g_loss:
+                filename = "best.pt"
+                best_d_loss = d_loss
+                best_g_loss = g_loss
             torch.save(
                 {
                     "step": cur_step,
+                    "best_d_loss": d_loss,
+                    "best_d_loss": g_loss,
                     "gan_generator_state_dict": gan_generator.state_dict(),
                     "gan_discriminator_state_dict": gan_discriminator.state_dict(),
                     "g_optimizer_state_dict": g_optimizer.state_dict(),
                     "d_optimizer_state_dict": d_optimizer.state_dict(),
                 },
-                os.path.join(config.model_save_path, f"step_{step + 1}.pt"),
+                os.path.join(config.model_save_path, filename),
             )
