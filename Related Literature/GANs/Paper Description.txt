@@ -7,3 +7,7 @@ ACGAN: Generator takes class input as well. Discriminator has 2 loss, both over 
 IS: https://medium.com/octavian-ai/a-simple-explanation-of-the-inception-score-372dff6a8c7a, Inception score measuring quality and diversity of generator, probably need to use a custom model instead of inception model for this task.
 
 ReACGAN: Propose a new loss technique once again. Similar to ACGAN in architecture, except for a more bloated discriminator
+
+SAGAN: Self attention, hinge loss, spectral normalization for layers in G and D. Conditional batch normalization in generator and projections in discriminator
+-> BigGAN: Orthogonal initialization
+-> ReACGAN: Projection onto hypersphere in discriminator, D2D-CE loss
