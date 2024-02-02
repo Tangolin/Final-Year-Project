@@ -5,6 +5,7 @@ import shutil
 root_dir = "./data/GEI_data"
 
 os.makedirs(os.path.join("./data/train"))
+
 for patho in os.listdir(root_dir):
     patho_train = os.path.join("./data/train", patho)
     patho_val = os.path.join("./data/val", patho)

@@ -14,9 +14,11 @@ model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
 model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
 checkpoint = torch.load(model_dir)
 model.load_state_dict(checkpoint["model_state_dict"])
-model_no_head = torch.nn.Sequential(*(list(model.children())[:-1]))
-print("Model has been loaded with architecture")
-print(model_no_head)
+model_feature_extractor = torch.nn.Sequential(*(list(model.children())[:-1]))
+model_label_predictor = list(model.children())[-1]
+model_feature_extractor.to(device)
+model_label_predictor.to(device)
+del model
 
 preprocess = transforms.Compose(
     [
@@ -43,12 +45,13 @@ accuracy = MulticlassAccuracy()
 
 with torch.no_grad():
     for idx, (imgs, labels) in enumerate(sample_loader):
-        output = model_no_head(imgs)
-        output = torch.squeeze(output)
+        imgs, labels = imgs.to(device), labels.to(device)
+        out = model_feature_extractor(imgs)
+        output = torch.flatten(out, 1)
         features.append(output)
 
-        o1 = model(imgs)
-        _, pred = torch.max(o1, 1)
+        logits = model_label_predictor(output)
+        _, pred = torch.max(logits, 1)
         accuracy.update(pred, labels)
 
 # Checking the accuracy on the samples for fun
@@ -62,4 +65,5 @@ torch.save(features, "features.pt")
 features = features.numpy()
 mu = np.mean(features, axis=0)
 sigma = np.cov(features, rowvar=False)
-print(f"The features have mean {mu} and covariance {sigma}.")
+np.savez("feature_stats.npz", mu=mu, sigma=sigma)
+print(f"The features have mean shape {mu.shape} and covariance shape {sigma.shape}.")
