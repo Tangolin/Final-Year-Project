@@ -17,7 +17,7 @@ num_classes = 5
 batch_size = 128
 learning_rate = 0.1
 num_epochs = 100
-best_eval = 0
+best_eval = float("inf")
 
 # Data loading and preprocessing
 preprocess = transforms.Compose(
@@ -78,7 +78,7 @@ optimizer = optim.Adam(model.parameters(), lr=learning_rate, betas=(0.8, 0.999))
 scheduler = optim.lr_scheduler.CosineAnnealingLR(
     optimizer, T_max=num_epochs * int(len(train_dataset) / batch_size)
 )
-early_stopper = EarlyStopper(patience=5, min_delta=0.01)
+early_stopper = EarlyStopper(patience=10, min_delta=1e-4)
 
 for epoch in range(num_epochs):
     # Train
@@ -132,8 +132,11 @@ for epoch in range(num_epochs):
     acc_value = accuracy.compute().item()
     f1_value = f1_score.compute().item()
 
-    if f1_value > best_eval:
+    if val_loss < best_eval:
         # Save the model if f1 is best
+        print(
+            f"Saving model to best.pt, current val-loss: {val_loss}, prev best: {best_eval}"
+        )
         torch.save(
             {
                 "epoch": epoch,
@@ -143,7 +146,7 @@ for epoch in range(num_epochs):
             },
             "./models/best.pt",
         )
-        best_eval = f1_value
+        best_eval = val_loss
 
     print(
         f"Epoch {epoch+1}/{num_epochs}, Loss: {val_loss}, Accuracy: {acc_value}, F1: {f1_value}."

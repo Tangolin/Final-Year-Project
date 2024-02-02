@@ -15,18 +15,15 @@ for patho in os.listdir(root_dir):
 
     patho_dir = os.path.join(root_dir, patho)
 
-    # First distribute into train and val
-    train_val = random.sample(
-        os.listdir(patho_dir), int(0.8 * len(os.listdir(patho_dir)))
-    )
-    cutoff = int(len(train_val) * 0.8)
-    train, val = train_val[:cutoff], train_val[cutoff:]
+    # First choose for sampling for IS and FID
+    sample = random.sample(os.listdir(patho_dir), 200)
+    for item in sample:
+        shutil.copy(os.path.join(patho_dir, item), patho_sample)
+
+    train_val = [i for i in os.listdir(patho_dir) if i not in sample]
+    train = random.sample(train_val, int(len(train_val) * 0.8))
+    val = [i for i in train_val if i not in train]
     for item in train:
         shutil.copy(os.path.join(patho_dir, item), patho_train)
     for item in val:
         shutil.copy(os.path.join(patho_dir, item), patho_val)
-
-    # Then distribute to sample
-    for i in os.listdir(patho_dir):
-        if i not in train_val:
-            shutil.copy(os.path.join(patho_dir, i), patho_sample)
