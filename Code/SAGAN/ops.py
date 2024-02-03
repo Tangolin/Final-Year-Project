@@ -1,7 +1,9 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
+from scipy import linalg
 from torch.nn.utils.parametrizations import spectral_norm
 from torchvision.transforms import v2
 
@@ -133,3 +135,56 @@ class ToGray(v2.Transform):
 def denorm(x):
     out = (x + 1) / 2
     return out.clamp_(0, 1)
+
+
+def calc_fid_score(outputs, feature_path, eps=1e-6):
+    # Load the feature statistics
+    loaded_data = np.load(feature_path)
+
+    # Access the arrays by their keys
+    feature_mu = loaded_data["mu"]
+    feature_sigma = loaded_data["sigma"]
+
+    # Calculate the generated image statistics
+    gan_mu = np.mean(outputs, axis=0)
+    gan_sigma = np.cov(outputs, rowvar=False)
+
+    # Code below from:
+    # https://github.com/mseitzer/pytorch-fid/blob/master/src/pytorch_fid/fid_score.py
+    diff = gan_mu - feature_mu
+
+    # Product might be almost singular
+    covmean, _ = linalg.sqrtm(gan_sigma.dot(feature_sigma), disp=False)
+    if not np.isfinite(covmean).all():
+        print(
+            "FID calculation produces singular product, "
+            + f"adding {eps} to diagonal of cov estimates"
+        )
+        offset = np.eye(gan_sigma.shape[0]) * eps
+        covmean = linalg.sqrtm((gan_sigma + offset).dot(feature_sigma + offset))
+
+    # Numerical error might give slight imaginary component
+    if np.iscomplexobj(covmean):
+        if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
+            m = np.max(np.abs(covmean.imag))
+            raise ValueError("Imaginary component {}".format(m))
+        covmean = covmean.real
+
+    tr_covmean = np.trace(covmean)
+
+    return (
+        diff.dot(diff) + np.trace(gan_sigma) + np.trace(feature_sigma) - 2 * tr_covmean
+    )
+
+
+def calc_is_score(predictor_logits, eps=1e-10):
+    activation = nn.Softmax(dim=1)
+    pred_prob = activation(predictor_logits)
+
+    marginal_prob = torch.mean(pred_prob, dim=0)
+    kl_div = pred_prob * (torch.log(pred_prob + eps) - torch.log(marginal_prob + eps))
+    kl_div = torch.sum(kl_div, dim=1)
+
+    avg_div = torch.mean(kl_div)
+
+    return torch.exp(avg_div).item()

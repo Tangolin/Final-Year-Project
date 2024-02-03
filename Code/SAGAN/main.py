@@ -52,11 +52,29 @@ def get_parameters():
     parser.add_argument("--train_data_dir", type=str, default="./data/CelebA")
     parser.add_argument("--model_save_path", type=str, default="./models")
     parser.add_argument("--sample_img_path", type=str, default="./samples")
+    parser.add_argument(
+        "--eval_model_path",
+        type=str,
+        default="./models/resnet.pt",
+        help="Path to the model used in evaluating IS and FID scores",
+    )
+    parser.add_argument(
+        "--feature_path",
+        type=str,
+        default="./feature_stats.npz",
+        help="Path to the mean and sigma of pre-extracted features in FID.",
+    )
 
     # Saving and logging settings
     parser.add_argument("--log_n_step", type=int, default=10)
     parser.add_argument("--sample_step", type=int, default=100)
-    parser.add_argument("--save_step", type=float, default=20)
+    parser.add_argument("--save_step", type=float, default=500)
+    parser.add_argument(
+        "--eval_step",
+        type=float,
+        default=500,
+        help="Number of steps before checking IS and FID scores",
+    )
 
     return parser.parse_args()
 

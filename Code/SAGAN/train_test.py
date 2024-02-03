@@ -6,9 +6,9 @@ import numpy as np
 import torch
 from discriminator_trial import Discriminator
 from generator import Generator
-from ops import ToGray, denorm
-from torch.utils.data import DataLoader
-from torchvision import transforms
+from ops import ToGray, calc_fid_score, calc_is_score, denorm
+from torch.utils.data import DataLoader, TensorDataset
+from torchvision import models, transforms
 from torchvision.datasets import ImageFolder
 from torchvision.utils import save_image
 
@@ -23,7 +23,6 @@ def train(config, device):
             transforms.Normalize(mean=[0.5], std=[0.5]),
         ]
     )
-
     dataset = ImageFolder(config.train_data_dir, transform=t)
 
     print(
@@ -49,6 +48,21 @@ def train(config, device):
     print(
         f"Validation noise vector created with shape {tuple(val_z.shape)}.", flush=True
     )
+
+    # Create the persistent pretrained model for evaluation of outputs
+    gait_ckpt = torch.load(config.eval_model_path)
+    gait_evaluator = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+    gait_evaluator.fc = torch.nn.Linear(
+        gait_evaluator.fc.in_features, config.num_classes
+    )
+    gait_evaluator.load_state_dict(gait_ckpt["model_state_dict"])
+    gait_feature_extractor = torch.nn.Sequential(
+        *(list(gait_evaluator.children())[:-1])
+    )
+    gait_label_predictor = torch.nn.Sequential(*(list(gait_evaluator.children())[-1]))
+    del gait_evaluator
+    gait_feature_extractor.to(device)
+    gait_label_predictor.to(device)
 
     # Create the model and the optimizer
     gan_generator = Generator(
@@ -164,7 +178,7 @@ def train(config, device):
         # Sample images
         if (step + 1) % config.sample_step == 0:
             with torch.no_grad():
-                fake_images = gan_generator(val_z, labels)
+                fake_images = gan_generator(val_z, val_lab)
             save_image(
                 denorm(real_images.detach()),
                 os.path.join(config.sample_img_path, f"{step + 1}_real.png"),
@@ -196,3 +210,53 @@ def train(config, device):
                 },
                 os.path.join(config.model_save_path, filename),
             )
+
+        # Evaluate the model output with FID and IS
+        if (step + 1) % config.eval_step == 0:
+            # Prepocessing steps before feeding in to evaluator
+            preprocess = transforms.Compose(
+                [
+                    transforms.Resize(224),
+                    transforms.Normalize(
+                        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                    ),
+                ]
+            )
+
+            # Create 1000 image samples
+            noise = torch.randn(1000, config.z_dim)
+            label = torch.randint(0, 5, size=(1000,))
+            z_dataset = TensorDataset(noise, label)
+            z_dataloader = DataLoader(
+                z_dataset, batch_size=config.batch_size, num_workers=4, pin_memory=True
+            )
+            outputs = []
+            preds = []
+
+            with torch.no_grad():
+                for noise, label in z_dataloader:
+                    noise, label = noise.to(device), label.to(device)
+                    gen_imgs = gan_generator(noise, label)
+                    gen_imgs = denorm(gen_imgs)  # Restore the pixel values to [0, 1]
+                    gen_imgs = torch.tile(gen_imgs, (1, 3, 1, 1))  # Create 3 channels
+                    gen_imgs = preprocess(gen_imgs)  # Usual preprocessing step to model
+
+                    # Append the feature output to one array
+                    out_features = torch.flatten(gait_feature_extractor(gen_imgs), 1)
+                    outputs.append(out_features)
+
+                    # Save the actual predictions to another array
+                    logits = gait_label_predictor(out_features)
+                    preds.append(logits)
+
+            outputs = torch.cat(outputs, dim=0).cpu().numpy()
+            preds = torch.cat(preds, dim=0).cpu()
+
+            IS_score = calc_is_score(preds)
+            FID_score = calc_fid_score(outputs, config.feature_path)
+            print("=====================Score Details=====================")
+            print(
+                f"Elapsed [{elapsed}] G_step [{step + 1}/{config.total_steps}]"
+                + f" , IS_score [{IS_score}], FID_score [{FID_score}]"
+            )
+            print("=======================================================")
