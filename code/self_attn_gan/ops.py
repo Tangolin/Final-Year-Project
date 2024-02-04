@@ -148,6 +148,7 @@ def calc_fid_score(outputs, feature_path, eps=1e-6):
     # Calculate the generated image statistics
     gan_mu = np.mean(outputs, axis=0)
     gan_sigma = np.cov(outputs, rowvar=False)
+    np.savez("gan_feature_stats.npz", mu=gan_mu, sigma=gan_sigma)
 
     # Code below from:
     # https://github.com/mseitzer/pytorch-fid/blob/master/src/pytorch_fid/fid_score.py
