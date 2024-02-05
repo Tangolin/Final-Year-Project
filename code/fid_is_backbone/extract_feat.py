@@ -62,7 +62,7 @@ for i in [8, 16, 32, 64, 128, 512]:
 
     # Checking the accuracy on the samples for fun
     print(
-        f"The accuracy of the model is {accuracy.compute().item():.2d}.",
+        f"The accuracy of the model is {accuracy.compute().item():.2f}.",
     )
 
     if not os.path.exists(output_dir):
@@ -74,10 +74,8 @@ for i in [8, 16, 32, 64, 128, 512]:
     torch.save(features, f"./output/features_{num_neurons}.pt")
 
     # Get statistics for FID
-    features = features.numpy()
     mu = np.mean(features, axis=0)
     sigma = np.cov(features, rowvar=False)
-    print(mu, sigma)
     np.savez(f"./output/feature_stats_{num_neurons}.npz", mu=mu, sigma=sigma)
     print(
         f"The features have mean shape {mu.shape} and covariance shape {sigma.shape}."
