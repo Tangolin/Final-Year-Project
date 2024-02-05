@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
-from ops import AttentionBlock, AttentionBlockNoPool
+from ops import AttentionBlockNoPool
 from torch.nn.utils.parametrizations import spectral_norm
 
 

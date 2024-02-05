@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 import torch
-from discriminator_trial import Discriminator
+from discriminator import Discriminator
 from generator import Generator
 from ops import ToGray, calc_fid_score, calc_is_score, denorm
 from torch.utils.data import DataLoader, TensorDataset
