@@ -1,0 +1,3 @@
+FID: dimensions are too high and many variables that may not correlate with important visual information are allowed to influence the final score, considering the image is on a grayscale and are largely similar, we need to reduce the dimensionality, and increase the ability of model to tell the difference.
+
+IS: IS will be biased towards imagenet classes. So we train on our own dataset, and therefore it will work well for our own data. We also remove the split according to the paper.
