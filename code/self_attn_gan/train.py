@@ -4,11 +4,12 @@ import time
 
 import numpy as np
 import torch
+import torch.nn as nn
 from discriminator import Discriminator
 from generator import Generator
-from ops import ToGray, calc_fid_score, calc_is_score, denorm
+from ops import ToGray, calc_fid_score, calc_is_score, denorm, get_resnet_model
 from torch.utils.data import DataLoader, TensorDataset
-from torchvision import models, transforms
+from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from torchvision.utils import save_image
 
@@ -49,18 +50,14 @@ def train(config, device):
         f"Validation noise vector created with shape {tuple(val_z.shape)}.", flush=True
     )
 
+    model_path = config.eval_model_path.format(config.gait_network_neurons)
     # Create the persistent pretrained model for evaluation of outputs
-    gait_ckpt = torch.load(config.eval_model_path)
-    gait_evaluator = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
-    gait_evaluator.fc = torch.nn.Linear(
-        gait_evaluator.fc.in_features, config.num_classes
+    gait_feature_extractor, gait_label_predictor = get_resnet_model(
+        config.gait_network_neurons,
+        config.num_classes,
+        ckpt=model_path,
+        split=True,
     )
-    gait_evaluator.load_state_dict(gait_ckpt["model_state_dict"])
-    gait_feature_extractor = torch.nn.Sequential(
-        *(list(gait_evaluator.children())[:-1])
-    )
-    gait_label_predictor = torch.nn.Sequential(*(list(gait_evaluator.children())[-1]))
-    del gait_evaluator
     gait_feature_extractor.to(device)
     gait_label_predictor.to(device)
 
@@ -145,8 +142,8 @@ def train(config, device):
         d_fake_out = gan_discriminator(fake_images, labels)
 
         # Calculate the 2 losses separately
-        d_real_loss = torch.nn.ReLU()(1 - d_real_out).mean()
-        d_fake_loss = torch.nn.ReLU()(1 + d_fake_out).mean()
+        d_real_loss = nn.ReLU()(1 - d_real_out).mean()
+        d_fake_loss = nn.ReLU()(1 + d_fake_out).mean()
         d_loss = d_real_loss + d_fake_loss
 
         # Do a backward pass on generator first

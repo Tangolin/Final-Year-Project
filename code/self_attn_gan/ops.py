@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch.nn.init as init
 from scipy import linalg
 from torch.nn.utils.parametrizations import spectral_norm
+from torchvision import models
 from torchvision.transforms import v2
 
 
@@ -55,7 +56,6 @@ class AttentionBlockNoPool(nn.Module):
         self.conv_o = spectral_norm(
             nn.Conv2d(in_channels // 2, in_channels, kernel_size=1)
         )
-        # self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
 
         # Learnable parameter sigma
         self.sigma = nn.parameter.Parameter(torch.zeros(1), requires_grad=True)
@@ -189,3 +189,28 @@ def calc_is_score(predictor_logits, eps=1e-10):
     avg_div = torch.mean(kl_div)
 
     return torch.exp(avg_div).item()
+
+
+def get_resnet_model(num_neurons, num_classes, ckpt=None, split=False):
+    model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+
+    # Customise model by replacing head and reduce in_channels
+    model.fc = nn.Sequential(
+        nn.Linear(model.fc.in_features, num_neurons),
+        nn.LeakyReLU(0.1, inplace=True),
+        nn.Linear(num_neurons, num_classes),
+    )
+
+    if ckpt is not None:
+        # Start from a trained model
+        checkpoint = torch.load(ckpt)
+        model.load_state_dict(checkpoint["model_state_dict"])
+
+    if split:
+        # Break it up to extract the features directly
+        label_predictor = model.fc[-1]
+        model.fc = model.fc[:-1]
+
+        return model, label_predictor
+
+    return model

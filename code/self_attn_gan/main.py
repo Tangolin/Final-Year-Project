@@ -4,7 +4,7 @@ from datetime import datetime
 
 import torch
 from torch.backends import cudnn
-from train_test import train
+from train import train
 
 
 def get_parameters():
@@ -13,7 +13,6 @@ def get_parameters():
     )
 
     parser.add_argument("--train", action="store_true")
-    # parser.add_argument("--parallel", type=str2bool, default=False)
 
     # GAN settings
     parser.add_argument("--imsize", type=int, default=64)
@@ -27,6 +26,12 @@ def get_parameters():
         type=int,
         default=64,
         help="Dimensions of the feature matrix in both the discriminator and generator.",
+    )
+    parser.add_argument(
+        "--gait_network_neurons",
+        type=int,
+        default=64,
+        help="Dimensions of the pretrained gait network feature layer.",
     )
 
     # Training setting
@@ -55,7 +60,7 @@ def get_parameters():
     parser.add_argument(
         "--eval_model_path",
         type=str,
-        default="./models/resnet.pt",
+        default="./models/gait_resnet_{}.pt",
         help="Path to the model used in evaluating IS and FID scores",
     )
     parser.add_argument(
