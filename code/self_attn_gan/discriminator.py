@@ -1,51 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.nn.init as init
 from ops import AttentionBlockNoPool
 from torch.nn.utils.parametrizations import spectral_norm
-
-
-class DiscriminatorBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super().__init__()
-        self.out_channels = out_channels
-
-        self.main_bloc = nn.Sequential(
-            spectral_norm(
-                nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
-            ),
-            nn.LeakyReLU(0.1),
-            spectral_norm(
-                nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
-            ),
-            nn.LeakyReLU(0.1),
-        )
-
-        self.skip_conv = spectral_norm(
-            nn.Conv2d(in_channels, out_channels, kernel_size=1)
-        )
-
-        self.initialise_weights()
-
-    def initialise_weights(self):
-        for layer in self.main_bloc.children():
-            if isinstance(layer, nn.Conv2d):
-                init.xavier_uniform_(layer.weight)
-                init.constant_(layer.bias, 0)
-
-        init.xavier_uniform_(self.skip_conv.weight)
-        init.constant_(self.skip_conv.bias, 0)
-
-    def forward(self, x):
-        x_0 = x
-
-        x = self.main_bloc(x)
-        x_0 = self.skip_conv(x_0)
-        x = F.avg_pool2d(x, kernel_size=2, stride=2, padding=0)
-        x_0 = F.avg_pool2d(x_0, kernel_size=2, stride=2, padding=0)
-
-        return x_0 + x
 
 
 class DiscriminatorBlockNoPool(nn.Module):
