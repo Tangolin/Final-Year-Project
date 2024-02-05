@@ -54,19 +54,19 @@ def get_parameters():
     parser.add_argument("--ckpt_path", type=str, default=None)
 
     # Path settings
-    parser.add_argument("--train_data_dir", type=str, default="./data/CelebA")
+    parser.add_argument("--train_data_dir", type=str, default="./data/GEI_data")
     parser.add_argument("--model_save_path", type=str, default="./models")
     parser.add_argument("--sample_img_path", type=str, default="./samples")
     parser.add_argument(
         "--eval_model_path",
         type=str,
-        default="./models/gait_resnet_{}.pt",
+        default="./fid_resources/gait_resnet_{}.pt",
         help="Path to the model used in evaluating IS and FID scores",
     )
     parser.add_argument(
         "--feature_path",
         type=str,
-        default="./feature_stats.npz",
+        default="./fid_resources/feature_stats_{}.npz",
         help="Path to the mean and sigma of pre-extracted features in FID.",
     )
 

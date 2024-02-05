@@ -128,7 +128,6 @@ def train(config, device):
         if step == 0:
             print(f"Images has shape: {tuple(real_images.shape)}.", flush=True)
             print(f"Labels has shape: {tuple(labels.shape)}.", flush=True)
-            print(labels, flush=True)
 
         with torch.no_grad():
             noise_vector = torch.randn((config.batch_size, config.z_dim)).to(device)
@@ -250,7 +249,8 @@ def train(config, device):
             preds = torch.cat(preds, dim=0).cpu()
 
             IS_score = calc_is_score(preds)
-            FID_score = calc_fid_score(outputs, config.feature_path)
+            feature_path = config.feature_path.format(config.gait_network_neurons)
+            FID_score = calc_fid_score(outputs, feature_path)
             print("=====================Score Details=====================")
             print(
                 f"Elapsed [{elapsed}] G_step [{step + 1}/{config.total_steps}]"
