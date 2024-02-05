@@ -6,6 +6,9 @@ errors
 models
 samples
 job.sh
+*.pt
+*.npz
+output
 
 # Byte-compiled / optimized / DLL files
 __pycache__
