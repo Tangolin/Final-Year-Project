@@ -48,9 +48,7 @@ def get_parameters():
     parser.add_argument("--optim_beta_2", type=float, default=0.9)
 
     # Resume training settings
-    parser.add_argument(
-        "--resume_training", action="store_true", help="Description of the flag"
-    )
+    parser.add_argument("--resume_training", action="store_true")
     parser.add_argument("--ckpt_path", type=str, default=None)
 
     # Path settings
