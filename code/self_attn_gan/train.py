@@ -51,6 +51,7 @@ def train(config, device):
     )
 
     model_path = config.eval_model_path.format(config.gait_network_neurons)
+
     # Create the persistent pretrained model for evaluation of outputs
     gait_feature_extractor, gait_label_predictor = get_resnet_model(
         config.gait_network_neurons,
