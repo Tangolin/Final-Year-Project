@@ -14,11 +14,11 @@ def split_gei_data(root_dir, split_sample=False):
     for patho in os.listdir(os.path.join(root_dir, data_dir)):
         patho_train = os.path.join(root_dir, train_dir, patho)
         patho_val = os.path.join(root_dir, val_dir, patho)
-        os.makedirs(patho_train)
-        os.makedirs(patho_val)
+        os.makedirs(patho_train, exist_ok=True)
+        os.makedirs(patho_val, exist_ok=True)
         if split_sample:
             patho_sample = os.path.join(root_dir, sample_dir, patho)
-            os.makedirs(patho_sample)
+            os.makedirs(patho_sample, exist_ok=True)
 
         patho_dir = os.path.join(root_dir, data_dir, patho)
 
