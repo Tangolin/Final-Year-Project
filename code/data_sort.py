@@ -1,30 +1,62 @@
+import argparse
 import os
 import random
 import shutil
 
-root_dir = "./data/GEI_data"
 
-os.makedirs(os.path.join("./data/train"))
+def split_gei_data(root_dir, split_sample=False):
+    data_dir = "data/GEI_data"
+    train_dir = "data/train"
+    val_dir = "data/val"
+    if split_sample:
+        sample_dir = "data/sample"
 
-for patho in os.listdir(root_dir):
-    patho_train = os.path.join("./data/train", patho)
-    patho_val = os.path.join("./data/val", patho)
-    patho_sample = os.path.join("./data/sample", patho)
-    os.makedirs(patho_train)
-    os.makedirs(patho_val)
-    os.makedirs(patho_sample)
+    for patho in os.listdir(os.path.join(root_dir, data_dir)):
+        patho_train = os.path.join(root_dir, train_dir, patho)
+        patho_val = os.path.join(root_dir, val_dir, patho)
+        os.makedirs(patho_train)
+        os.makedirs(patho_val)
+        if split_sample:
+            patho_sample = os.path.join(root_dir, sample_dir, patho)
+            os.makedirs(patho_sample)
 
-    patho_dir = os.path.join(root_dir, patho)
+        patho_dir = os.path.join(root_dir, data_dir, patho)
 
-    # First choose for sampling for IS and FID
-    sample = random.sample(os.listdir(patho_dir), 200)
-    for item in sample:
-        shutil.copy(os.path.join(patho_dir, item), patho_sample)
+        # First choose for sampling for IS and FID
+        if split_sample:
+            sample = random.sample(os.listdir(patho_dir), 200)
+            for item in sample:
+                shutil.copy(os.path.join(patho_dir, item), patho_sample)
+        else:
+            sample = []
 
-    train_val = [i for i in os.listdir(patho_dir) if i not in sample]
-    train = random.sample(train_val, int(len(train_val) * 0.8))
-    val = [i for i in train_val if i not in train]
-    for item in train:
-        shutil.copy(os.path.join(patho_dir, item), patho_train)
-    for item in val:
-        shutil.copy(os.path.join(patho_dir, item), patho_val)
+        train_val = [i for i in os.listdir(patho_dir) if i not in sample]
+        train = random.sample(train_val, int(len(train_val) * 0.8))
+        val = [i for i in train_val if i not in train]
+
+        for item in train:
+            shutil.copy(os.path.join(patho_dir, item), patho_train)
+        for item in val:
+            shutil.copy(os.path.join(patho_dir, item), patho_val)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Split the GEI data into train, val and optionally sample."
+    )
+
+    parser.add_argument(
+        "--root_dir",
+        type=str,
+        required=True,
+        help="Root folder where the data folder is stored.",
+    )
+
+    parser.add_argument(
+        "--split_sample",
+        action="store_true",
+        help="If a sample folder is required. (Only for GAN fid backbone)",
+    )
+
+    args = parser.parse_args()
+    split_gei_data(args.root_dir, args.split_sample)
