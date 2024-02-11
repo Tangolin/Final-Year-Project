@@ -95,6 +95,8 @@ def get_resnet_model(num_neurons, num_classes, ckpt=None, split=False):
         checkpoint = torch.load(ckpt)
         model.load_state_dict(checkpoint["model_state_dict"])
 
+    model.eval()
+
     if split:
         # Break it up to extract the features directly
         label_predictor = model.fc[-1]
