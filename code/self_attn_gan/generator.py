@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
-from ops import AttentionBlock, ConditionalBatchNorm
+from ops import AttentionBlockNoPool, ConditionalBatchNorm
 from torch.nn.utils.parametrizations import spectral_norm
 
 
@@ -15,18 +15,18 @@ class GeneratorBlock(nn.Module):
                 nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
             ),
             ConditionalBatchNorm(num_classes, out_channels),
-            nn.ReLU(),
+            nn.LeakyReLU(0.1),
             spectral_norm(
                 nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
             ),
-            nn.ReLU(),
+            nn.LeakyReLU(0.1),
         )
 
         self.bn1 = ConditionalBatchNorm(num_classes, in_channels)
         self.skip_conv = spectral_norm(
             nn.Conv2d(in_channels, out_channels, kernel_size=1)
         )
-        self.act = nn.ReLU()
+        self.act = nn.LeakyReLU(0.1)
 
         self.initialise_weights()
 
@@ -70,12 +70,12 @@ class Generator(nn.Module):
             GeneratorBlock(g_feature_dim * 16, g_feature_dim * 8, num_classes),
             GeneratorBlock(g_feature_dim * 8, g_feature_dim * 4, num_classes),
             # Img size 32 * 32
-            AttentionBlock(g_feature_dim * 4),
+            AttentionBlockNoPool(g_feature_dim * 4),
             GeneratorBlock(g_feature_dim * 4, g_feature_dim * 2, num_classes),
             # Img size 256 * 256
             GeneratorBlock(g_feature_dim * 2, g_feature_dim, num_classes),
             nn.BatchNorm2d(g_feature_dim, eps=1e-5, momentum=0.9999),
-            nn.ReLU(),
+            nn.LeakyReLU(0.1),
             spectral_norm(
                 nn.Conv2d(
                     g_feature_dim, out_channels=out_channels, kernel_size=3, padding=1
