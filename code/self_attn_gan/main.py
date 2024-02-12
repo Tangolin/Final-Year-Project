@@ -15,7 +15,7 @@ def get_parameters():
     parser.add_argument("--train", action="store_true")
 
     # GAN settings
-    parser.add_argument("--imsize", type=int, default=64)
+    parser.add_argument("--imsize", type=int, default=128)
     parser.add_argument("--num_classes", type=int, default=5)
     parser.add_argument("--num_channels", type=int, default=1)
     parser.add_argument(
@@ -36,6 +36,12 @@ def get_parameters():
 
     # Training setting
     parser.add_argument(
+        "--eval_mode",
+        type=str,
+        default="both",
+        choices=["both", "fid", "siamese", "none"],
+    )
+    parser.add_argument(
         "--total_steps",
         type=int,
         default=10000,
@@ -52,7 +58,7 @@ def get_parameters():
     parser.add_argument("--ckpt_path", type=str, default=None)
 
     # Path settings
-    parser.add_argument("--train_data_dir", type=str, default="./data/GEI_data")
+    parser.add_argument("--train_data_dir", type=str, default="../data/GEI_data_filter")
     parser.add_argument("--model_save_path", type=str, default="./models")
     parser.add_argument("--sample_img_path", type=str, default="./samples")
     parser.add_argument(
@@ -60,6 +66,12 @@ def get_parameters():
         type=str,
         default="./fid_resources/gait_resnet_{}.pt",
         help="Path to the model used in evaluating IS and FID scores",
+    )
+    parser.add_argument(
+        "--siamese_model_path",
+        type=str,
+        default="./models/siamese_model.pt",
+        help="Path to the siamese model",
     )
     parser.add_argument(
         "--feature_path",
