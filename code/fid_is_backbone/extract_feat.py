@@ -14,11 +14,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 cudnn.deterministic = True
 cudnn.benchmark = False
 
-data_dir = "./data/sample/"
+data_dir = "../data/sample/"
 output_dir = "./output"
 num_classes = 5
 
-for i in [8, 16, 32, 64, 128, 512]:
+for i in [8, 16, 32, 64, 128, 256, 512]:
     print("=" * 60)
     num_neurons = i
     model_dir = f"./models/gait_resnet_{num_neurons}.pt"
@@ -71,12 +71,16 @@ for i in [8, 16, 32, 64, 128, 512]:
     # Save the tensors in case of future needs
     features = torch.cat(features, dim=0).cpu().numpy()
     labels = torch.cat(labels, dim=0).cpu().numpy()
-    torch.save(features, f"./output/features_{num_neurons}.pt")
 
     # Get statistics for FID
     mu = np.mean(features, axis=0)
     sigma = np.cov(features, rowvar=False)
-    np.savez(f"./output/feature_stats_{num_neurons}.npz", mu=mu, sigma=sigma)
+    np.savez(
+        f"./output/feature_stats_{num_neurons}.npz",
+        mu=mu,
+        sigma=sigma,
+        features=features,
+    )
     print(
         f"The features have mean shape {mu.shape} and covariance shape {sigma.shape}."
     )
