@@ -24,7 +24,9 @@ def split_gei_data(root_dir, split_sample=False):
 
         # First choose for sampling for IS and FID
         if split_sample:
-            sample = random.sample(os.listdir(patho_dir), 200)
+            sample = random.sample(
+                os.listdir(patho_dir), int(0.1 * len(os.listdir(patho_dir)))
+            )
             for item in sample:
                 shutil.copy(os.path.join(patho_dir, item), patho_sample)
         else:
