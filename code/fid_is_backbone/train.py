@@ -135,7 +135,7 @@ for num_neurons in [8, 16, 32, 64, 128, 256, 512]:
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                 },
-                f"./models/gait_resnet_{num_neurons}.pt",
+                f"../models/gait_resnet_{num_neurons}.pt",
             )
             best_eval = val_loss
             best_acc = acc_value
