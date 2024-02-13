@@ -68,9 +68,7 @@ def main(config):
     exp_name = "SAGAN-" + current_time
 
     if config.train:
-        config.model_save_path = os.path.join(config.model_save_path, exp_name)
         config.sample_img_path = os.path.join(config.sample_img_path, exp_name)
-        os.makedirs(config.model_save_path, exist_ok=True)
         os.makedirs(config.sample_img_path, exist_ok=True)
 
         print(config, flush=True)

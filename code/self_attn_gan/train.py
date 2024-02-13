@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from discriminator import Discriminator
 from generator import Generator
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from torchvision.utils import save_image
@@ -172,15 +172,9 @@ def train(config, device):
             )
 
         # Save checkpoint if model performs well or every n steps
-        if (d_loss < best_d_loss and g_loss < best_g_loss) or (
-            (step + 1) % config.save_step == 0
-        ):
-            if (step + 1) % config.save_step == 0:
-                filename = f"step_{step + 1}.pt"
-            if d_loss < best_d_loss and g_loss < best_g_loss:
-                filename = "best.pt"
-                best_d_loss = d_loss
-                best_g_loss = g_loss
+        if d_loss < best_d_loss and g_loss < best_g_loss:
+            best_d_loss = d_loss
+            best_g_loss = g_loss
             torch.save(
                 {
                     "step": cur_step,
@@ -191,5 +185,5 @@ def train(config, device):
                     "g_optimizer_state_dict": g_optimizer.state_dict(),
                     "d_optimizer_state_dict": d_optimizer.state_dict(),
                 },
-                os.path.join(config.model_save_path, filename),
+                os.path.join(config.model_save_path, "sagan.pt"),
             )
