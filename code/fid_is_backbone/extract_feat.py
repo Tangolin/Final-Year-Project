@@ -15,13 +15,13 @@ cudnn.deterministic = True
 cudnn.benchmark = False
 
 data_dir = "../data/sample/"
-output_dir = "./output"
+output_dir = "../output"
 num_classes = 5
 
 for i in [8, 16, 32, 64, 128, 256, 512]:
     print("=" * 60)
     num_neurons = i
-    model_dir = f"./models/gait_resnet_{num_neurons}.pt"
+    model_dir = f"../models/gait_resnet_{num_neurons}.pt"
     print(f"Trial with {num_neurons} neurons.")
 
     # Load the relevant model
@@ -76,7 +76,7 @@ for i in [8, 16, 32, 64, 128, 256, 512]:
     mu = np.mean(features, axis=0)
     sigma = np.cov(features, rowvar=False)
     np.savez(
-        f"./output/feature_stats_{num_neurons}.npz",
+        f"../output/feature_stats_{num_neurons}.npz",
         mu=mu,
         sigma=sigma,
         features=features,
