@@ -27,20 +27,8 @@ def get_parameters():
         default=64,
         help="Dimensions of the feature matrix in both the discriminator and generator.",
     )
-    parser.add_argument(
-        "--gait_network_neurons",
-        type=int,
-        default=64,
-        help="Dimensions of the pretrained gait network feature layer.",
-    )
 
     # Training setting
-    parser.add_argument(
-        "--eval_mode",
-        type=str,
-        default="both",
-        choices=["both", "fid", "siamese", "none"],
-    )
     parser.add_argument(
         "--total_steps",
         type=int,
@@ -59,37 +47,13 @@ def get_parameters():
 
     # Path settings
     parser.add_argument("--train_data_dir", type=str, default="../data/GEI_data_filter")
-    parser.add_argument("--model_save_path", type=str, default="./models")
+    parser.add_argument("--model_save_path", type=str, default="../models")
     parser.add_argument("--sample_img_path", type=str, default="./samples")
-    parser.add_argument(
-        "--eval_model_path",
-        type=str,
-        default="./fid_resources/gait_resnet_{}.pt",
-        help="Path to the model used in evaluating IS and FID scores",
-    )
-    parser.add_argument(
-        "--siamese_model_path",
-        type=str,
-        default="./models/siamese_model.pt",
-        help="Path to the siamese model",
-    )
-    parser.add_argument(
-        "--feature_path",
-        type=str,
-        default="./fid_resources/feature_stats_{}.npz",
-        help="Path to the mean and sigma of pre-extracted features in FID.",
-    )
 
     # Saving and logging settings
     parser.add_argument("--log_n_step", type=int, default=10)
     parser.add_argument("--sample_step", type=int, default=100)
     parser.add_argument("--save_step", type=float, default=500)
-    parser.add_argument(
-        "--eval_step",
-        type=float,
-        default=500,
-        help="Number of steps before checking IS and FID scores",
-    )
 
     return parser.parse_args()
 
