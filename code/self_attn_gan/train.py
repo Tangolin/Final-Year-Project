@@ -7,11 +7,11 @@ import torch
 import torch.nn as nn
 from discriminator import Discriminator
 from generator import Generator
-from ops import ToGray, calc_fid_score, calc_is_score, denorm, get_resnet_model
 from torch.utils.data import DataLoader, TensorDataset
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from torchvision.utils import save_image
+from utils import ToGray, denorm
 
 
 def train(config, device):
@@ -50,18 +50,6 @@ def train(config, device):
         f"Validation noise vector created with shape {tuple(val_z.shape)}.", flush=True
     )
 
-    model_path = config.eval_model_path.format(config.gait_network_neurons)
-
-    # Create the persistent pretrained model for evaluation of outputs
-    gait_feature_extractor, gait_label_predictor = get_resnet_model(
-        config.gait_network_neurons,
-        config.num_classes,
-        ckpt=model_path,
-        split=True,
-    )
-    gait_feature_extractor.to(device)
-    gait_label_predictor.to(device)
-
     # Create the model and the optimizer
     gan_generator = Generator(
         in_features=config.z_dim,
@@ -74,8 +62,6 @@ def train(config, device):
         d_feature_dim=config.feature_dim,  # Should be same as config.g_feature_dim
         num_classes=config.num_classes,
     ).to(device)
-    print(gan_generator)
-    print(gan_discriminator)
     print("GAN model initialised.", flush=True)
 
     g_optimizer = torch.optim.Adam(
@@ -207,54 +193,3 @@ def train(config, device):
                 },
                 os.path.join(config.model_save_path, filename),
             )
-
-        # Evaluate the model output with FID and IS
-        if (step + 1) % config.eval_step == 0:
-            # Prepocessing steps before feeding in to evaluator
-            preprocess = transforms.Compose(
-                [
-                    transforms.Resize(224),
-                    transforms.Normalize(
-                        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                    ),
-                ]
-            )
-
-            # Create 1000 image samples
-            noise = torch.randn(1000, config.z_dim)
-            label = torch.randint(0, 5, size=(1000,))
-            z_dataset = TensorDataset(noise, label)
-            z_dataloader = DataLoader(
-                z_dataset, batch_size=config.batch_size, num_workers=4, pin_memory=True
-            )
-            outputs = []
-            preds = []
-
-            with torch.no_grad():
-                for noise, label in z_dataloader:
-                    noise, label = noise.to(device), label.to(device)
-                    gen_imgs = gan_generator(noise, label)
-                    gen_imgs = denorm(gen_imgs)  # Restore the pixel values to [0, 1]
-                    gen_imgs = torch.tile(gen_imgs, (1, 3, 1, 1))  # Create 3 channels
-                    gen_imgs = preprocess(gen_imgs)  # Usual preprocessing step to model
-
-                    # Append the feature output to one array
-                    out_features = torch.flatten(gait_feature_extractor(gen_imgs), 1)
-                    outputs.append(out_features)
-
-                    # Save the actual predictions to another array
-                    logits = gait_label_predictor(out_features)
-                    preds.append(logits)
-
-            outputs = torch.cat(outputs, dim=0).cpu().numpy()
-            preds = torch.cat(preds, dim=0).cpu()
-
-            IS_score = calc_is_score(preds)
-            feature_path = config.feature_path.format(config.gait_network_neurons)
-            FID_score = calc_fid_score(outputs, feature_path)
-            print("=====================Score Details=====================")
-            print(
-                f"Elapsed [{elapsed}] G_step [{step + 1}/{config.total_steps}]"
-                + f" , IS_score [{IS_score}], FID_score [{FID_score}]"
-            )
-            print("=======================================================")
