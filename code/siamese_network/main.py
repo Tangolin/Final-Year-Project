@@ -31,13 +31,12 @@ def get_parameters():
     parser.add_argument("--ckpt_path", type=str, default=None)
 
     # Path settings
-    parser.add_argument("--train_data_dir", type=str, default="./data/train")
-    parser.add_argument("--val_data_dir", type=str, default="./data/val")
-    parser.add_argument("--model_save_path", type=str, default="./models")
+    parser.add_argument("--train_data_dir", type=str, default="../data/train")
+    parser.add_argument("--val_data_dir", type=str, default="../data/val")
+    parser.add_argument("--model_save_path", type=str, default="../models")
 
     # Saving and logging settings
     parser.add_argument("--log_n_step", type=int, default=10)
-    parser.add_argument("--save_n_epoch", type=float, default=5)
 
     return parser.parse_args()
 
@@ -49,11 +48,6 @@ def main(config):
     cudnn.benchmark = False
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    current_time = datetime.now().strftime("%Y-%m-%d-%H-%M")
-    exp_name = "SIAMESE-" + current_time
-    config.model_save_path = os.path.join(config.model_save_path, exp_name)
-    os.makedirs(config.model_save_path, exist_ok=True)
 
     train_preprocess = transforms.Compose(
         [
@@ -118,12 +112,8 @@ def main(config):
         train(config, model, device, train_loader, optimizer, epoch)
         val_loss = validate(model, device, val_loader)
 
-        if (val_loss < best_val_loss) or ((epoch + 1) % config.save_n_epoch == 0):
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                ckpt_name = "best.pt"
-            else:
-                ckpt_name = f"epoch_{epoch+1}.pt"
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
             torch.save(
                 {
                     "epoch": epoch,
@@ -131,7 +121,7 @@ def main(config):
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                 },
-                os.path.join(config.model_save_path, ckpt_name),
+                os.path.join(config.model_save_path, "siamese_net.pt"),
             )
 
 
