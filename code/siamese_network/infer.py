@@ -38,7 +38,7 @@ model.load_state_dict(checkpoint["model_state_dict"])
 model.to(device)
 model.eval()
 
-dataset = ImageFolder("../data/sample", transform=preprocess)
+dataset = ImageFolder("../data/GEI_data", transform=preprocess)
 print(f" The mapping is {dataset.class_to_idx}.")
 dataloader = DataLoader(
     dataset, batch_size=128, num_workers=2, shuffle=False, pin_memory=True

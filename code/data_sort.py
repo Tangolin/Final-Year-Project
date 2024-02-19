@@ -1,6 +1,7 @@
 import argparse
 import os
 import random
+import re
 import shutil
 
 
@@ -16,6 +17,7 @@ def split_gei_data(root_dir, split_sample=False):
         patho_val = os.path.join(root_dir, val_dir, patho)
         os.makedirs(patho_train, exist_ok=True)
         os.makedirs(patho_val, exist_ok=True)
+
         if split_sample:
             patho_sample = os.path.join(root_dir, sample_dir, patho)
             os.makedirs(patho_sample, exist_ok=True)
@@ -33,8 +35,24 @@ def split_gei_data(root_dir, split_sample=False):
             sample = []
 
         train_val = [i for i in os.listdir(patho_dir) if i not in sample]
-        train = random.sample(train_val, int(len(train_val) * 0.8))
-        val = [i for i in train_val if i not in train]
+        train = []
+        val = []
+
+        for item in train_val:
+            pattern = re.compile(r"s(ub)*(\d+)")
+            match = pattern.search(item)
+            sub_num = int("".join([i for i in match.group() if i.isnumeric()]))
+
+            if "GAIT_IST" in item:
+                if sub_num <= 8:
+                    train.append(item)
+                else:
+                    val.append(item)
+            else:
+                if sub_num <= 18:
+                    train.append(item)
+                else:
+                    val.append(item)
 
         for item in train:
             shutil.copy(os.path.join(patho_dir, item), patho_train)
