@@ -1,3 +1,4 @@
+import collections
 import os
 
 import numpy as np
@@ -5,79 +6,94 @@ import torch
 from PIL import Image
 from siamese_net import SiameseNetwork
 from torch.backends import cudnn
+from torch.utils.data import DataLoader
 from torchvision import transforms
+from torchvision.datasets import ImageFolder
 from torchvision.transforms import v2
 
-if not os.path.exists("sim_mat.npz"):
-    torch.manual_seed(42)
+# if not os.path.exists("../output/sim_mat.npz"):
+torch.manual_seed(42)
 
-    cudnn.deterministic = True
-    cudnn.benchmark = False
+cudnn.deterministic = True
+cudnn.benchmark = False
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    class ToRGB(v2.Transform):
-        def __init__(self):
-            super().__init__()
 
-        def __call__(self, img):
-            return torch.tile(img, (1, 3, 1, 1))
+class ToRGB(v2.Transform):
+    def __init__(self):
+        super().__init__()
 
-    preprocess = transforms.Compose(
-        [
-            transforms.Resize(128),  # Resize to 128 to emulate actual process
-            transforms.Resize(224),
-            transforms.ToTensor(),
-            ToRGB(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
+    def __call__(self, img):
+        return torch.tile(img, (1, 3, 1, 1))
 
-    model = SiameseNetwork()
-    checkpoint = torch.load(
-        "./models/SIAMESE-2024-02-06-16-37/best.pt", map_location=device
-    )
-    model.load_state_dict(checkpoint["model_state_dict"])
-    model.to(device)
-    model.eval()
 
-    filenames = []
+preprocess = transforms.Compose(
+    [
+        transforms.Resize(128),  # Resize to 128 to emulate actual process
+        transforms.Resize(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
 
-    for patho in os.listdir("./data/sample"):
-        for name in os.listdir(os.path.join("./data/sample", patho)):
-            filenames.append(os.path.join("./data/sample", patho, name))
+model = SiameseNetwork()
+checkpoint = torch.load("../models/siamese_net.pt", map_location=device)
+model.load_state_dict(checkpoint["model_state_dict"])
+model.to(device)
+model.eval()
 
-    sim_matrix = np.zeros((1000, 1000))
+dataset = ImageFolder("../data/sample", transform=preprocess)
+print(f" The mapping is {dataset.class_to_idx}.")
+dataloader = DataLoader(
+    dataset, batch_size=128, num_workers=2, shuffle=False, pin_memory=True
+)
 
-    for i in range(len(filenames)):
-        img_1 = preprocess(Image.open(filenames[i])).to(device)
+features = []
+labels = []
+all_preds = []
 
-        for j in range(i, len(filenames)):
-            img_2 = preprocess(Image.open(filenames[j])).to(device)
+sim_matrix = np.zeros((len(dataset), len(dataset)))
 
-            with torch.no_grad():
-                _, _, output = model(img_1, img_2)
+with torch.no_grad():
+    for data, label in dataloader:
+        data, label = data.to(device), label.to(device)
+        out = model.extract_features(data)
+        features.append(out)
+        labels.append(label)
 
-            sim_matrix[i][j] = output
+    features = torch.cat(features, dim=0)
+    labels = torch.cat(labels, dim=0)
 
-    np.savez("sim_mat.npz", sim_mat=sim_matrix)
+    for i, f in enumerate(features):
+        f = torch.tile(f, (len(features), 1))
+        in_f = torch.cat((f, features), 1)
+        preds = model.act(model.fc(in_f)).squeeze()
+        all_preds.append(preds)
 
-else:
-    loaded_data = np.load("sim_mat.npz")
-    sim_matrix = loaded_data["sim_mat"]
+    sim_matrix = torch.stack(all_preds, dim=0).cpu().numpy()
+    print(sim_matrix.shape)
 
 # Each image's similarity score to itself
-average_sim_to_itself = np.trace(sim_matrix) / 1000
-print(average_sim_to_itself)
+average_sim_to_itself = np.trace(sim_matrix) / len(sim_matrix)
+print(f"The average similarity is {average_sim_to_itself:.6f}.")
 
 # Calculate the average patho gait similarity
 patho_sim_mat = np.zeros((5, 5))
+counts = torch.bincount(labels)
+cum_counts = torch.cumsum(counts, 0).cpu()
+cum_counts = torch.cat([torch.tensor([0]), cum_counts], dim=0)
 
 for i in range(5):
     for j in range(i, 5):
-        rel_mat = sim_matrix[i * 200 : (i + 1) * 200, j * 200 : (j + 1) * 200]
+        rel_mat = sim_matrix[
+            cum_counts[i] : cum_counts[i + 1], cum_counts[j] : cum_counts[j + 1]
+        ]
+        rel_mat = np.triu(rel_mat)
         sum_sim = np.sum(rel_mat) - np.trace(rel_mat)
-        avg_sim = sum_sim / 19900  # 19900 is the number of elements
+        avg_sim = sum_sim / (
+            (counts[i] * (counts[i] + 1) / 2) - counts[i]
+        )  # divide it by the number of real elements
         patho_sim_mat[i][j] = avg_sim
 
 print(patho_sim_mat)
