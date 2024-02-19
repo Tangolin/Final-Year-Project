@@ -52,7 +52,7 @@ def main(config):
     train_preprocess = transforms.Compose(
         [
             transforms.Resize(128),  # Resize to 128 to emulate actual process
-            transforms.RandomResizedCrop((224, 224), (0.65, 1)),
+            transforms.RandomResizedCrop((224, 224), (0.65, 0.85)),
             transforms.RandomHorizontalFlip(0.5),
             transforms.RandomVerticalFlip(0.5),
             transforms.RandomRotation(180),
@@ -113,6 +113,7 @@ def main(config):
         val_loss = validate(model, device, val_loader)
 
         if val_loss < best_val_loss:
+            print("Saving model...")
             best_val_loss = val_loss
             torch.save(
                 {
