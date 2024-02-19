@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torcheval.metrics import MulticlassAccuracy, MulticlassF1Score
-from torchvision import datasets
-from utils import get_resnet_model, preprocess
+from torchvision import datasets, transforms
+from utils import get_resnet_model
 
 torch.backends.cudnn.benchmark = True
 torch.manual_seed(42)
@@ -18,29 +18,29 @@ num_epochs = 50
 # Set device (CPU or GPU) and create model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+train_preprocess = transforms.Compose(
+    [
+        transforms.Resize(128),  # Resize to 128 to emulate actual process
+        transforms.RandomResizedCrop((224, 224), (0.65, 1)),
+        transforms.RandomHorizontalFlip(0.5),
+        transforms.RandomVerticalFlip(0.5),
+        transforms.RandomRotation(180),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
+val_preprocess = transforms.Compose(
+    [
+        transforms.Resize(128),  # Resize to 128 to emulate actual process
+        transforms.Resize(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
+
 # Create the train and test dataset
-train_dataset = datasets.ImageFolder(root="../data/train", transform=preprocess)
-val_dataset = datasets.ImageFolder(root="../data/val", transform=preprocess)
-
-
-# Creating an early stopping mechanism
-class EarlyStopper:
-    def __init__(self, patience=1, min_delta=0):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.counter = 0
-        self.min_validation_loss = float("inf")
-
-    def early_stop(self, validation_loss):
-        if validation_loss < self.min_validation_loss:
-            self.min_validation_loss = validation_loss
-            self.counter = 0
-        elif validation_loss > (self.min_validation_loss + self.min_delta):
-            self.counter += 1
-            if self.counter >= self.patience:
-                return True
-        return False
-
+train_dataset = datasets.ImageFolder(root="../data/train", transform=train_preprocess)
+val_dataset = datasets.ImageFolder(root="../data/val", transform=val_preprocess)
 
 for num_neurons in [8, 16, 32, 64, 128, 256, 512]:
     print("*" * 100)
@@ -72,7 +72,6 @@ for num_neurons in [8, 16, 32, 64, 128, 256, 512]:
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=num_epochs * int(len(train_dataset) / batch_size)
     )
-    early_stopper = EarlyStopper(patience=10, min_delta=1e-4)
 
     for epoch in range(num_epochs):
         # Train
@@ -144,10 +143,5 @@ for num_neurons in [8, 16, 32, 64, 128, 256, 512]:
         print(
             f"Epoch {epoch+1}/{num_epochs}, Loss: {val_loss}, Accuracy: {acc_value}, F1: {f1_value}."
         )
-
-        if early_stopper.early_stop(val_loss):
-            print(f"Early stopping. Final epoch: {epoch}.")
-            print(f"Loss: {best_eval}, Accuracy: {best_acc}, F1: {best_f1}.")
-            break
 
     print("Training completed.")
