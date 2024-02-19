@@ -45,7 +45,7 @@ def train(config, device):
 
     # Create the validation vector
     val_z = torch.randn(config.batch_size, config.z_dim).to(device)
-    val_lab = torch.randint(0, 5, size=(config.batch_size,)).to(device)
+    val_lab = torch.arange(5).repeat(200).sort()[0].to(device)
     print(
         f"Validation noise vector created with shape {tuple(val_z.shape)}.", flush=True
     )
