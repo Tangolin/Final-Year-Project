@@ -1,9 +1,5 @@
-import collections
-import os
-
 import numpy as np
 import torch
-from PIL import Image
 from siamese_net import SiameseNetwork
 from torch.backends import cudnn
 from torch.utils.data import DataLoader
@@ -11,7 +7,6 @@ from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import v2
 
-# if not os.path.exists("../output/sim_mat.npz"):
 torch.manual_seed(42)
 
 cudnn.deterministic = True
