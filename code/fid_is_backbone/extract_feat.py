@@ -62,7 +62,7 @@ for i in [8, 16, 32, 64, 128, 256, 512]:
 
     # Checking the accuracy on the samples for fun
     print(
-        f"The accuracy of the model is {accuracy.compute().item():.2f}.",
+        f"The accuracy of the model is {accuracy.compute().item()}.",
     )
 
     if not os.path.exists(output_dir):
