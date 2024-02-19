@@ -38,7 +38,6 @@ def calc_fid_score(outputs, feature_path, eps=1e-6):
     # Calculate the generated image statistics
     gan_mu = np.mean(outputs, axis=0)
     gan_sigma = np.cov(outputs, rowvar=False)
-    np.savez("fid_resources/gan_feature_stats.npz", mu=gan_mu, sigma=gan_sigma)
 
     # Code below from:
     # https://github.com/mseitzer/pytorch-fid/blob/master/src/pytorch_fid/fid_score.py
@@ -73,6 +72,8 @@ def calc_is_score(predictor_logits, eps=1e-10):
     pred_prob = activation(predictor_logits)
 
     marginal_prob = torch.mean(pred_prob, dim=0)
+    print(marginal_prob)
+    print(pred_prob)
     kl_div = pred_prob * (torch.log(pred_prob + eps) - torch.log(marginal_prob + eps))
     kl_div = torch.sum(kl_div, dim=1)
 
